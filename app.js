@@ -2,7 +2,6 @@
 // 1. STATE DATA & INITIALIZATION
 // ==========================================
 
-// Ambil data dari localStorage jika ada, atau gunakan array dummy awal untuk pengujian
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [
   {
     id: 1,
@@ -20,12 +19,32 @@ let tasks = JSON.parse(localStorage.getItem('tasks')) || [
   }
 ];
 
-// State untuk menyimpan filter yang sedang aktif
 let currentFilter = 'semua';
 
 // DOM Elements
+const taskForm = document.getElementById('task-form');
+const taskTitleInput = document.getElementById('task-title');
+const taskMatkulSelect = document.getElementById('task-matkul');
+const taskDeadlineInput = document.getElementById('task-deadline');
+const errorMessage = document.getElementById('error-message');
 const taskList = document.getElementById('task-list');
 const taskCounter = document.getElementById('task-counter');
+
+// Helper untuk menyimpan array tasks ke localStorage
+function saveToLocalStorage() {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
+// Helper untuk menampilkan & menyembunyikan pesan error
+function showError(message) {
+  errorMessage.textContent = message;
+  errorMessage.classList.remove('hidden');
+}
+
+function hideError() {
+  errorMessage.textContent = '';
+  errorMessage.classList.add('hidden');
+}
 
 
 // ==========================================
@@ -33,24 +52,19 @@ const taskCounter = document.getElementById('task-counter');
 // ==========================================
 
 function render() {
-  // A. Bersihkan daftar tugas di UL sebelum merender ulang
   taskList.innerHTML = '';
 
-  // B. Bonus: Urutkan data berdasarkan deadline terdekat
   const sortedTasks = [...tasks].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
-  // C. Filter data sesuai state filter saat ini
   const filteredTasks = sortedTasks.filter(task => {
     if (currentFilter === 'aktif') return !task.selesai;
     if (currentFilter === 'selesai') return task.selesai;
-    return true; // 'semua'
+    return true;
   });
 
-  // D. Perbarui counter "N tugas aktif"
   const activeCount = tasks.filter(task => !task.selesai).length;
   taskCounter.textContent = `${activeCount} tugas aktif`;
 
-  // E. Tampilkan pesan jika daftar kosong
   if (filteredTasks.length === 0) {
     const emptyLi = document.createElement('li');
     emptyLi.className = 'empty-state';
@@ -59,27 +73,22 @@ function render() {
     return;
   }
 
-  // F. Render elemen tugas satu per satu
   filteredTasks.forEach(task => {
     const li = document.createElement('li');
     li.className = `task-item ${task.selesai ? 'completed' : ''}`;
     li.dataset.id = task.id;
 
-    // Container Info
     const infoDiv = document.createElement('div');
     infoDiv.className = 'task-info';
 
-    // Checkbox Selesai
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'task-checkbox';
     checkbox.checked = task.selesai;
 
-    // Details (Judul & Meta)
     const detailsDiv = document.createElement('div');
     detailsDiv.className = 'task-details';
 
-    // KEAMANAN (XSS): Gunakan textContent untuk teks dari user
     const titleSpan = document.createElement('span');
     titleSpan.className = 'task-title-text';
     titleSpan.textContent = task.judul;
@@ -94,20 +103,63 @@ function render() {
     infoDiv.appendChild(checkbox);
     infoDiv.appendChild(detailsDiv);
 
-    // Tombol Hapus (Silang)
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
     deleteBtn.className = 'btn-delete';
     deleteBtn.textContent = '✕';
 
-    // Gabungkan ke elemen LI
     li.appendChild(infoDiv);
     li.appendChild(deleteBtn);
 
-    // Masukkan LI ke UL
     taskList.appendChild(li);
   });
 }
 
-// Jalankan render awal saat aplikasi pertama kali dimuat
+
+// ==========================================
+// 3. FORM TAMBAH TUGAS & VALIDASI
+// ==========================================
+
+taskForm.addEventListener('submit', function (e) {
+  // Mencegah browser melakukan refresh otomatis
+  e.preventDefault();
+
+  const judul = taskTitleInput.value.trim();
+  const matkul = taskMatkulSelect.value;
+  const deadline = taskDeadlineInput.value;
+
+  // Validasi 1: Judul minimal 3 karakter
+  if (judul.length < 3) {
+    showError('Judul tugas minimal harus 3 karakter.');
+    return;
+  }
+
+  // Validasi 2: Deadline wajib diisi
+  if (!deadline) {
+    showError('Tanggal deadline wajib diisi.');
+    return;
+  }
+
+  // Jika lolos validasi, sembunyikan pesan error yang muncul sebelumnya
+  hideError();
+
+  // Buat objek tugas baru dengan ID unik berbasis timestamp
+  const newTask = {
+    id: Date.now(),
+    judul: judul,
+    matkul: matkul,
+    deadline: deadline,
+    selesai: false
+  };
+
+  // Masukkan ke array state & simpan ke localStorage
+  tasks.push(newTask);
+  saveToLocalStorage();
+
+  // Kosongkan form input dan render ulang daftar tugas
+  taskForm.reset();
+  render();
+});
+
+// Render awal
 render();
