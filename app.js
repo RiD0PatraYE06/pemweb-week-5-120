@@ -2,6 +2,7 @@
 // 1. STATE DATA & INITIALIZATION
 // ==========================================
 
+// Ambil data dari localStorage, jika kosong gunakan data dummy awal
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [
   {
     id: 1,
@@ -29,6 +30,7 @@ const taskDeadlineInput = document.getElementById('task-deadline');
 const errorMessage = document.getElementById('error-message');
 const taskList = document.getElementById('task-list');
 const taskCounter = document.getElementById('task-counter');
+const filterButtons = document.querySelectorAll('.filter-btn');
 
 // Helper LocalStorage
 function saveToLocalStorage() {
@@ -52,19 +54,24 @@ function hideError() {
 // ==========================================
 
 function render() {
+  // A. Bersihkan elemen list
   taskList.innerHTML = '';
 
+  // B. Sorting berdasarkan deadline terdekat (Bonus)
   const sortedTasks = [...tasks].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
 
+  // C. Filter data sesuai status filter saat ini
   const filteredTasks = sortedTasks.filter(task => {
     if (currentFilter === 'aktif') return !task.selesai;
     if (currentFilter === 'selesai') return task.selesai;
-    return true;
+    return true; // 'semua'
   });
 
+  // D. Update counter tugas aktif
   const activeCount = tasks.filter(task => !task.selesai).length;
   taskCounter.textContent = `${activeCount} tugas aktif`;
 
+  // E. Tampilkan empty state jika daftar kosong
   if (filteredTasks.length === 0) {
     const emptyLi = document.createElement('li');
     emptyLi.className = 'empty-state';
@@ -73,6 +80,7 @@ function render() {
     return;
   }
 
+  // F. Render setiap elemen item tugas
   filteredTasks.forEach(task => {
     const li = document.createElement('li');
     li.className = `task-item ${task.selesai ? 'completed' : ''}`;
@@ -89,6 +97,7 @@ function render() {
     const detailsDiv = document.createElement('div');
     detailsDiv.className = 'task-details';
 
+    // XSS Protection: Menggunakan textContent
     const titleSpan = document.createElement('span');
     titleSpan.className = 'task-title-text';
     titleSpan.textContent = task.judul;
@@ -160,13 +169,12 @@ taskForm.addEventListener('submit', function (e) {
 // ==========================================
 
 taskList.addEventListener('click', function (e) {
-  // Cari elemen <li> terdekat yang menampung dataset.id
   const li = e.target.closest('li');
   if (!li || !li.dataset.id) return;
 
   const taskId = Number(li.dataset.id);
 
-  // Case A: Jika Checkbox diklik
+  // Toggle Checkbox Selesai
   if (e.target.classList.contains('task-checkbox')) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
@@ -176,7 +184,7 @@ taskList.addEventListener('click', function (e) {
     }
   }
 
-  // Case B: Jika Tombol Hapus diklik
+  // Tombol Hapus
   if (e.target.classList.contains('btn-delete')) {
     tasks = tasks.filter(t => t.id !== taskId);
     saveToLocalStorage();
@@ -184,5 +192,22 @@ taskList.addEventListener('click', function (e) {
   }
 });
 
-// Render awal
+
+// ==========================================
+// 5. FILTER TUGAS & FINALISASI
+// ==========================================
+
+filterButtons.forEach(button => {
+  button.addEventListener('click', function () {
+    // Pindahkan class 'on' ke tombol yang baru diklik
+    filterButtons.forEach(btn => btn.classList.remove('on'));
+    this.classList.add('on');
+
+    // Update state filter dan panggil render ulang
+    currentFilter = this.dataset.filter;
+    render();
+  });
+});
+
+// Render awal saat aplikasi dimuat
 render();
