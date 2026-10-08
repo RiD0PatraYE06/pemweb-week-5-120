@@ -30,12 +30,12 @@ const errorMessage = document.getElementById('error-message');
 const taskList = document.getElementById('task-list');
 const taskCounter = document.getElementById('task-counter');
 
-// Helper untuk menyimpan array tasks ke localStorage
+// Helper LocalStorage
 function saveToLocalStorage() {
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-// Helper untuk menampilkan & menyembunyikan pesan error
+// Helper Pesan Error
 function showError(message) {
   errorMessage.textContent = message;
   errorMessage.classList.remove('hidden');
@@ -121,29 +121,24 @@ function render() {
 // ==========================================
 
 taskForm.addEventListener('submit', function (e) {
-  // Mencegah browser melakukan refresh otomatis
   e.preventDefault();
 
   const judul = taskTitleInput.value.trim();
   const matkul = taskMatkulSelect.value;
   const deadline = taskDeadlineInput.value;
 
-  // Validasi 1: Judul minimal 3 karakter
   if (judul.length < 3) {
     showError('Judul tugas minimal harus 3 karakter.');
     return;
   }
 
-  // Validasi 2: Deadline wajib diisi
   if (!deadline) {
     showError('Tanggal deadline wajib diisi.');
     return;
   }
 
-  // Jika lolos validasi, sembunyikan pesan error yang muncul sebelumnya
   hideError();
 
-  // Buat objek tugas baru dengan ID unik berbasis timestamp
   const newTask = {
     id: Date.now(),
     judul: judul,
@@ -152,13 +147,41 @@ taskForm.addEventListener('submit', function (e) {
     selesai: false
   };
 
-  // Masukkan ke array state & simpan ke localStorage
   tasks.push(newTask);
   saveToLocalStorage();
 
-  // Kosongkan form input dan render ulang daftar tugas
   taskForm.reset();
   render();
+});
+
+
+// ==========================================
+// 4. EVENT DELEGATION PADA <ul>
+// ==========================================
+
+taskList.addEventListener('click', function (e) {
+  // Cari elemen <li> terdekat yang menampung dataset.id
+  const li = e.target.closest('li');
+  if (!li || !li.dataset.id) return;
+
+  const taskId = Number(li.dataset.id);
+
+  // Case A: Jika Checkbox diklik
+  if (e.target.classList.contains('task-checkbox')) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      task.selesai = e.target.checked;
+      saveToLocalStorage();
+      render();
+    }
+  }
+
+  // Case B: Jika Tombol Hapus diklik
+  if (e.target.classList.contains('btn-delete')) {
+    tasks = tasks.filter(t => t.id !== taskId);
+    saveToLocalStorage();
+    render();
+  }
 });
 
 // Render awal
